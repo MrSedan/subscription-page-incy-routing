@@ -1,5 +1,3 @@
-import { RawAxiosResponseHeaders } from 'axios';
-import { AxiosResponseHeaders } from 'axios';
 import { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
 import { nanoid } from 'nanoid';
@@ -100,12 +98,7 @@ export class RootService {
                 return this.returnWebpage(clientIp, req, res, shortUuidLocal);
             }
 
-            let subscriptionDataResponse: {
-                response: unknown;
-                headers: RawAxiosResponseHeaders | AxiosResponseHeaders;
-            } | null = null;
-
-            subscriptionDataResponse = await this.axiosService.getSubscription(
+            const subscriptionDataResponse = await this.axiosService.getSubscription(
                 clientIp,
                 shortUuidLocal,
                 req.headers,
@@ -127,6 +120,7 @@ export class RootService {
             }
 
             res.status(200).send(subscriptionDataResponse.response);
+            return;
         } catch (error) {
             this.logger.error('Error in serveSubscriptionPage', error);
 
