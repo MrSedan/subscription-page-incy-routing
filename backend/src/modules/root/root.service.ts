@@ -230,7 +230,7 @@ export class RootService {
                 panelData: Buffer.from(JSON.stringify(subscriptionData)).toString('base64'),
             });
         } catch (error) {
-            this.logger.error('Error in returnWebpage', error);
+            this.logger.error(`Error in returnWebpage: ${error}`);
 
             res.socket?.destroy();
             return;
