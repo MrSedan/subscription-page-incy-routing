@@ -101,7 +101,7 @@ export class RootService {
 
             const headers = {
                 ...req.headers,
-                ...(isIncyClient && { 'user-agent': 'Happ/INCY' }),
+                ...(isIncyClient && { 'user-agent': 'Happ/' + req.headers['user-agent'] }),
             };
 
             const subscriptionDataResponse = await this.axiosService.getSubscription(
