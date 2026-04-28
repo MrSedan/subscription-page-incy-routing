@@ -2,10 +2,9 @@ import { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
 import { nanoid } from 'nanoid';
 
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Logger } from '@nestjs/common';
 
 import { TRequestTemplateTypeKeys } from '@remnawave/backend-contract';
 
@@ -98,10 +97,17 @@ export class RootService {
                 return this.returnWebpage(clientIp, req, res, shortUuidLocal);
             }
 
+            const isIncyClient = this.isIncyClient(req);
+
+            const headers = {
+                ...req.headers,
+                ...(isIncyClient && { 'user-agent': 'Happ/INCY' }),
+            };
+
             const subscriptionDataResponse = await this.axiosService.getSubscription(
                 clientIp,
                 shortUuidLocal,
-                req.headers,
+                headers,
                 !!clientType,
                 clientType,
             );
@@ -115,7 +121,11 @@ export class RootService {
                 Object.entries(subscriptionDataResponse.headers)
                     .filter(([key]) => !IGNORED_HEADERS.has(key.toLowerCase()))
                     .forEach(([key, value]) => {
-                        res.setHeader(key, value);
+                        const finalValue = this.rewriteIncyRoutingHeader(key, value, isIncyClient);
+
+                        if (finalValue !== undefined) {
+                            res.setHeader(key, finalValue);
+                        }
                     });
             }
 
@@ -154,6 +164,40 @@ export class RootService {
         ];
 
         return browserKeywords.some((keyword) => userAgent.includes(keyword));
+    }
+    private isIncyClient(req: Request): boolean {
+        const userAgent = this.headerValueToString(req.headers['user-agent']);
+        const client = this.headerValueToString(req.headers['x-client']);
+
+        return userAgent.toLowerCase().includes('incy') || client.toLowerCase() === 'incy';
+    }
+
+    private headerValueToString(value: string | string[] | undefined): string {
+        if (Array.isArray(value)) {
+            return value.join(',');
+        }
+
+        return value ?? '';
+    }
+
+    private rewriteIncyRoutingHeader(
+        key: string,
+        value: string | string[] | number | undefined,
+        isIncyClient: boolean,
+    ): string | string[] | number | undefined {
+        if (!isIncyClient || key.toLowerCase() !== 'routing') {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            return value.replaceAll('happ://', 'incy://');
+        }
+
+        if (Array.isArray(value)) {
+            return value.map((item) => item.replaceAll('happ://', 'incy://'));
+        }
+
+        return value;
     }
 
     private isGenericPath(path: string): boolean {
